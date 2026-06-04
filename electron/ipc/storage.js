@@ -72,7 +72,7 @@ function buildTestPlaylist() {
     lobbyVideo: 'local://assets/lobby-loop.mp4',
     openingIdent: 'local://assets/ident.mp4',
     trailers: [
-      { type: 'youtube', ytId: 'dQw4w9WgXcQ', title: 'Test Trailer 1' },
+      { type: 'youtube', ytId: '_IY7_iCuINo', title: 'Test Trailer 1' },
     ],
     short: {
       type: 'torrent',

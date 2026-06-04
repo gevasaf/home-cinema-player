@@ -150,9 +150,16 @@ export default function App() {
       )}
 
       {/* State debug badge — remove in Phase 3 */}
-      <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded font-mono">
+      <div className="absolute top-2 right-2 flex items-center gap-2 bg-black/50 text-white text-xs px-2 py-1 rounded font-mono">
         {seqCtx.state}
         {seqCtx.state === STATES.TRAILERS && ` [${seqCtx.trailerIndex + 1}/${seqCtx.playlist?.trailers?.length ?? 0}]`}
+        <button
+          onClick={() => seqRef.current?.advance()}
+          className="bg-white/20 hover:bg-white/40 text-white px-1.5 py-0.5 rounded text-xs leading-none"
+          title="Skip to next state"
+        >
+          ⏭
+        </button>
       </div>
     </div>
   )

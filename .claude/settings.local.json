@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(Remove-Item \"$env:APPDATA\\\\home-cinema-player\\\\cinema-data.json\")"
+    ]
+  }
+}

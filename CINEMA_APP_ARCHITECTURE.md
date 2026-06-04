@@ -187,6 +187,48 @@ Each state resolves its source type (`local`, `youtube`, `torrent`) via the appr
 
 ---
 
+## Pre-buffering (Phase 3)
+
+### Goal
+Eliminate the spinner between states. Cloud sources (YouTube via yt-dlp, torrents via Torrentio → Debrid) have non-trivial resolution latency. Local sources (lobby loop, ident, bumper) are free to play and provide natural windows to resolve and buffer the next cloud source in the background.
+
+### Generic rule
+> **Whenever the sequencer enters a local state, scan forward in the remaining queue for the next cloud state and begin resolving it immediately. If that cloud state is only one step away, also start Shaka preloading once the URL is ready.**
+
+No hardcoded state names — the logic operates on source types.
+
+```
+onStateEnter(state, remainingQueue):
+  if state.sourceType === 'local':
+    nextCloud = remainingQueue.find(s => s.sourceType !== 'local')
+    if nextCloud:
+      prebuffer.resolve(nextCloud)           // fire IPC (yt-dlp or Torrentio→Debrid)
+      if remainingQueue[0] === nextCloud:    // immediately next
+        prebuffer.resolve(nextCloud).then(url => shaka.preload(url))
+```
+
+`prebuffer` is a simple promise cache keyed by state ID — if resolution is already in flight or complete, subsequent lookups return the same promise rather than firing a second IPC call.
+
+### How this plays out in a typical cinema night
+
+| Playing (local) | Next cloud state | Action |
+|---|---|---|
+| LOBBY | Trailer 1 (youtube) | yt-dlp resolve starts in background |
+| COMING_UP | Trailer 1 (youtube) | same promise, no-op if already in flight |
+| IDENT | Trailer 1 (youtube) | URL likely ready → Shaka preload starts |
+| Trailer N (youtube) | Trailer N+1 (youtube) | resolve N+1 URL while N plays |
+| BUMPER | FEATURE (torrent) | URL resolved during SHORT → Shaka preload starts immediately |
+
+The BUMPER is the highest-value window: it's a ~30s local clip immediately before the feature film. If FEATURE resolution started during SHORT, Shaka begins pulling segments the moment BUMPER starts — the feature is ready with no visible load time.
+
+### Shaka preload API
+Shaka 4+ supports `player.preload(url)` which fetches the manifest and initial segments without starting playback. At state transition, `player.load()` resumes from the preloaded state and is near-instant.
+
+### Subtitle pre-fetch
+Subtitle resolution (OpenSubtitles IPC call) for the next torrent source is fired alongside stream URL resolution — both are cheap network calls and can be in flight simultaneously.
+
+---
+
 ## Subtitles
 
 - **Primary source:** OpenSubtitles API (queried by IMDB ID + preferred language)
@@ -297,6 +339,8 @@ Standard pattern (same as YouTube TV, Netflix TV sign-in). Supabase magic links 
 - Branded assets integration (lobby loop, ident, bumper — supplied as local files)
 - Sequencer transitions and crossfades
 - Full cinema-mode UI (full bleed, no chrome, dark)
+- Pre-buffering: generic look-ahead resolver — on every local state, scan forward for next cloud state and begin IPC resolution + Shaka preload (see Pre-buffering section)
+- Pre-buffering pipeline (see Pre-Buffering section below)
 
 ### Phase 4 — Android TV
 - D-pad navigation wired throughout (norigin-spatial-navigation)

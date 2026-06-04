@@ -21,7 +21,8 @@ function resolveYouTube(binaryPath, ytIdOrUrl) {
     execFile(
       binaryPath,
       [
-        '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
+        '--js-runtimes', 'node',
+        '--format', 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
         '--get-url',
         url,
       ],

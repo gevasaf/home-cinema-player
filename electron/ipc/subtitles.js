@@ -3,9 +3,12 @@ const https = require('https')
 function httpsGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers }, (res) => {
-      // Follow redirects
+      // Follow redirects, resolving relative location headers against the original URL
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return httpsGet(res.headers.location, headers).then(resolve).catch(reject)
+        const location = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).href
+        return httpsGet(location, headers).then(resolve).catch(reject)
       }
       let data = ''
       res.on('data', (c) => { data += c })

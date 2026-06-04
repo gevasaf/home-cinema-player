@@ -1,4 +1,5 @@
 const https = require('https')
+const { proxyUrl } = require('./transcodeProxy')
 
 function httpsGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -6,7 +7,8 @@ function httpsGet(url, headers = {}) {
       let data = ''
       res.on('data', (c) => { data += c })
       res.on('end', () => {
-        try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+        if (!data.trim()) { resolve(null); return }
+        try { resolve(JSON.parse(data)) } catch (e) { reject(new Error(`Invalid JSON from ${url} (HTTP ${res.statusCode}): ${data.slice(0, 200)}`)) }
       })
     }).on('error', reject)
   })
@@ -31,7 +33,8 @@ function httpsPost(url, body, headers = {}) {
         let data = ''
         res.on('data', (c) => { data += c })
         res.on('end', () => {
-          try { resolve(JSON.parse(data)) } catch (e) { reject(e) }
+          if (!data.trim()) { resolve(null); return }
+          try { resolve(JSON.parse(data)) } catch (e) { reject(new Error(`Invalid JSON from ${url} (HTTP ${res.statusCode}): ${data.slice(0, 200)}`)) }
         })
       }
     )
@@ -127,15 +130,18 @@ function createDebridHandlers(ipcMain, store) {
 
     const { infoHash } = streams[0]
 
+    let directUrl
     if (service === 'alldebrid') {
       const apiKey = store.get('settings.allDebridApiKey')
       if (!apiKey) throw new Error('AllDebrid API key not configured')
-      return resolveAllDebrid(apiKey, infoHash)
+      directUrl = await resolveAllDebrid(apiKey, infoHash)
+    } else {
+      const apiToken = store.get('settings.realDebridApiToken')
+      if (!apiToken) throw new Error('Real-Debrid API token not configured')
+      directUrl = await resolveRealDebrid(apiToken, infoHash)
     }
 
-    const apiToken = store.get('settings.realDebridApiToken')
-    if (!apiToken) throw new Error('Real-Debrid API token not configured')
-    return resolveRealDebrid(apiToken, infoHash)
+    return proxyUrl(directUrl)
   })
 }
 

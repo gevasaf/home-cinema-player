@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, session } = require('electron')
 const path = require('path')
 
 const { createStorageHandlers } = require('./ipc/storage')
@@ -6,6 +6,7 @@ const { createTmdbHandlers } = require('./ipc/tmdb')
 const { createYtdlpHandlers } = require('./ipc/ytdlp')
 const { createDebridHandlers } = require('./ipc/debrid')
 const { createSubtitlesHandlers } = require('./ipc/subtitles')
+const { startTranscodeProxy, stopTranscodeProxy } = require('./ipc/transcodeProxy')
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -31,7 +32,22 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await startTranscodeProxy()
+  // Allow Shaka Player to fetch YouTube CDN streams from the renderer
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.googlevideo.com/*'] },
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Access-Control-Allow-Origin': ['*'],
+          'Access-Control-Allow-Methods': ['GET, HEAD, OPTIONS'],
+        },
+      })
+    }
+  )
+
   createWindow()
 
   const store = createStorageHandlers(ipcMain, mainWindow)
@@ -46,5 +62,6 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  stopTranscodeProxy()
   if (process.platform !== 'darwin') app.quit()
 })
