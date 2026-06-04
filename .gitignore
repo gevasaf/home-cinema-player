@@ -1,3 +1,7 @@
 node_modules/
 dist/
 *.log
+config/settings.local.json
+assets/yt-dlp.exe
+assets/yt-dlp
+assets/*.mp4
