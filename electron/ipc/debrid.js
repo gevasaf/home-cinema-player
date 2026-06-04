@@ -1,5 +1,5 @@
 const https = require('https')
-const { proxyUrl } = require('./transcodeProxy')
+const { resolveStreamUrl } = require('./transcodeProxy')
 
 function httpsGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -141,12 +141,12 @@ function createDebridHandlers(ipcMain, store) {
       directUrl = await resolveRealDebrid(apiToken, infoHash)
     }
 
-    return proxyUrl(directUrl, audioTrack)
+    return resolveStreamUrl(directUrl, audioTrack)
   })
 
-  // Wrap a pre-resolved URL through the transcode proxy (curator-pinned stream).
+  // Wrap a pre-resolved URL through the transcode proxy if needed (curator-pinned stream).
   ipcMain.handle('debrid:proxy', async (_event, url, audioTrack = 0) => {
-    return proxyUrl(url, audioTrack)
+    return resolveStreamUrl(url, audioTrack)
   })
 }
 

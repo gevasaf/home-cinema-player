@@ -60,10 +60,9 @@ const ShakaPlayer = forwardRef(function ShakaPlayer(
 
     let cancelled = false
 
-    // Transcoded proxy streams (localhost) are infinite streaming responses —
-    // Shaka MSE can't handle them without Content-Length / range support.
-    // Use native <video src> instead, which handles progressive streaming fine.
-    if (streamUrl.startsWith('http://127.0.0.1')) {
+    // Use native <video src> for direct files (proxy streams, direct debrid URLs, YouTube MP4s).
+    // Shaka is only needed for adaptive manifests (HLS .m3u8 / DASH .mpd).
+    if (!/\.(m3u8|mpd)(\?|$)/i.test(streamUrl)) {
       player.unload().then(() => {
         if (cancelled) return
         video.src = streamUrl

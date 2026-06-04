@@ -108,4 +108,18 @@ function proxyUrl(debridUrl, audioTrack = 0) {
   return `http://127.0.0.1:${port}/?url=${encodeURIComponent(debridUrl)}${audio}`
 }
 
-module.exports = { startTranscodeProxy, stopTranscodeProxy, proxyUrl }
+// Probe codec and return the direct URL if Chromium can play it natively,
+// otherwise route through the local transcode proxy.
+async function resolveStreamUrl(debridUrl, audioTrack = 0) {
+  const ffmpeg = getFfmpegPath()
+  const codec = await probeVideoCodec(ffmpeg, debridUrl)
+  const needsProxy = !codec || !CHROMIUM_NATIVE_CODECS.has(codec)
+  if (needsProxy) {
+    console.log(`[transcodeProxy] ${codec ?? 'unknown codec'} → proxying through ffmpeg`)
+    return proxyUrl(debridUrl, audioTrack)
+  }
+  console.log(`[transcodeProxy] ${codec} is natively supported — streaming direct`)
+  return debridUrl
+}
+
+module.exports = { startTranscodeProxy, stopTranscodeProxy, proxyUrl, resolveStreamUrl }
