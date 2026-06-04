@@ -1,0 +1,9 @@
+{
+  "settings.tmdbApiKey": "YOUR_TMDB_API_KEY",
+  "settings.openSubtitlesApiKey": "YOUR_OPENSUBTITLES_API_KEY",
+  "settings.realDebridApiToken": "YOUR_REAL_DEBRID_TOKEN",
+  "settings.allDebridApiKey": "YOUR_ALLDEBRID_API_KEY",
+  "settings.debridService": "real-debrid",
+  "settings.subtitleLanguage": "en",
+  "settings.ytdlpBinaryPath": ""
+}

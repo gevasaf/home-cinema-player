@@ -1,4 +1,6 @@
 const Store = require('electron-store')
+const fs = require('fs')
+const path = require('path')
 
 // All electron-store access is isolated here. No other module imports electron-store.
 const electronStore = new Store({ name: 'cinema-data' })
@@ -31,6 +33,19 @@ const store = {
   },
 }
 
+function seedFromLocalConfig() {
+  const configPath = path.join(__dirname, '../../config/settings.local.json')
+  if (!fs.existsSync(configPath)) return
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    for (const [key, value] of Object.entries(config)) {
+      if (value !== '') store.set(key, value)
+    }
+  } catch (err) {
+    console.warn('Could not load settings.local.json:', err.message)
+  }
+}
+
 function createStorageHandlers(ipcMain, mainWindow) {
   ipcMain.handle('storage:get', (_event, key) => store.get(key))
 
@@ -38,6 +53,9 @@ function createStorageHandlers(ipcMain, mainWindow) {
     store.set(key, value)
     notifySubscribers(mainWindow, key, value)
   })
+
+  // Load API keys from local config file (gitignored)
+  seedFromLocalConfig()
 
   // Seed test playlist on first run
   if (!store.get('testPlaylistSeeded')) {
