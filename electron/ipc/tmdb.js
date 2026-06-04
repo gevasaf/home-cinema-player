@@ -55,6 +55,7 @@ function createTmdbHandlers(ipcMain, store) {
         ? `https://image.tmdb.org/t/p/w500${detail.poster_path}`
         : null,
       trailerYtKey: trailer ? trailer.key : null,
+      originalLanguage: detail.original_language || null,
     }
   })
 }

@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "PowerShell(Remove-Item \"$env:APPDATA\\\\home-cinema-player\\\\cinema-data.json\")"
+      "PowerShell(Remove-Item \"$env:APPDATA\\\\home-cinema-player\\\\cinema-data.json\")",
+      "Bash(node node_modules/electron/install.js)",
+      "PowerShell($env:ELECTRON_GET_USE_PROXY = \"\"; node node_modules/electron/install.js 2>&1)",
+      "PowerShell(node -e \"process.env.ELECTRON_GET_USE_PROXY=''; require\\('./node_modules/@electron/get/dist/cjs/index.js'\\)\" 2>&1; echo \"exit: $LASTEXITCODE\")",
+      "PowerShell(npm install electron --save-dev 2>&1)",
+      "PowerShell(& \"D:\\\\dev\\\\home-cinema\\\\assets\\\\yt-dlp.exe\" -o \"D:\\\\dev\\\\home-cinema\\\\assets\\\\lobby-loop.mp4\" \"https://www.youtube.com/watch?v=kFLckelk8E0\")",
+      "WebFetch(domain:opensubtitles.stoplight.io)",
+      "WebFetch(domain:api.opensubtitles.com)",
+      "WebFetch(domain:subdl.com)",
+      "WebFetch(domain:rest.opensubtitles.org)",
+      "WebFetch(domain:www.opensubtitles.org)",
+      "Bash(node -e \"require\\('node:zlib'\\); require\\('node:stream'\\); console.log\\('ok'\\)\")",
+      "PowerShell(Get-ChildItem \"$env:APPDATA\\\\home-cinema-player\")"
     ]
   }
 }

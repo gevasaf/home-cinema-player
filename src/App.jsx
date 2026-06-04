@@ -18,8 +18,11 @@ const resolvers = {
     return uri.replace('local://', '')
   },
   resolveYoutube: (ytIdOrUrl) => window.cinema.ytdlp.resolve(ytIdOrUrl),
-  resolveDebrid: (imdbId) => window.cinema.debrid.resolve(imdbId),
+  resolveYoutubeSubtitles: (ytIdOrUrl) => window.cinema.ytdlp.resolveSubtitles(ytIdOrUrl),
+  resolveDebrid: (imdbId, audioTrack) => window.cinema.debrid.resolve(imdbId, audioTrack),
+  proxyStreamUrl: (url, audioTrack) => window.cinema.debrid.proxy(url, audioTrack),
   fetchSubtitles: (imdbId, lang) => window.cinema.subtitles.fetch(imdbId, lang),
+  fetchSubtitleUrl: (url) => window.cinema.subtitles.fetchUrl(url),
   onStateChange: () => {}, // replaced below
   onComplete: async (playlist) => {
     const history = (await store.get('playlistHistory')) || []

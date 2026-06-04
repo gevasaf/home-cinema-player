@@ -43,6 +43,15 @@ Search / Select title
 
 Both Real-Debrid and AllDebrid are supported with a toggle in Settings. Resolution happens in the Electron main process (Node.js), away from the renderer, avoiding CORS entirely.
 
+**Stream quality and presentation are the playlist curator's responsibility.** The app takes the top Torrentio result (by seeder count) and the first file link from Real-Debrid without any filtering. The curator owns:
+
+- **Source link** — picking a torrent/YouTube URL that resolves to the correct version (language, quality, no dubs)
+- **Audio track** — specifying which track index to use if the file has multiple (e.g. commentary, dubs)
+- **Subtitle track** — selecting or overriding the auto-fetched subtitle source
+- **Subtitle offset** — correcting sync if the subtitle file doesn't align with the chosen encode
+
+The admin/curator UI must provide good tooling for this: stream preview, audio track inspection, subtitle preview with adjustable offset, and a way to lock a verified link per playlist slot before cinema night.
+
 ---
 
 ## Electron Main Process — IPC Endpoints
@@ -104,11 +113,27 @@ await store.subscribe('watchlist', onChange)
     { "type": "youtube", "ytId": "abc123", "title": "..." }
   ],
   "short": {
-    "type": "torrent", "imdbId": "tt1234567", "title": "...", "tmdbId": "..."
+    "type": "torrent | youtube",
+    "imdbId": "tt1234567",
+    "title": "...",
+    "tmdbId": "...",
+    "ytId": "...",
+    "streamUrl": "https://... or null",
+    "audioTrack": 0,
+    "subtitleOverride": "https://... or null",
+    "subtitleOffset": 0
   },
   "featureBumper": "local://assets/feature-presentation.mp4",
   "feature": {
-    "type": "torrent", "imdbId": "tt7654321", "title": "...", "tmdbId": "..."
+    "type": "torrent | youtube",
+    "imdbId": "tt7654321",
+    "title": "...",
+    "tmdbId": "...",
+    "ytId": "...",
+    "streamUrl": "https://... or null",
+    "audioTrack": 0,
+    "subtitleOverride": "https://... or null",
+    "subtitleOffset": 0
   },
   "completedAt": "ISO date or null",
   "history": { ... }   // written on completion, see Playlist History below
@@ -244,7 +269,12 @@ Accessible via PIN or gesture. Three screens:
 
 ### Weekly Planner
 - Drag items from watchlist into slots: lobby video, ident, trailers (ordered list), short, feature bumper, feature
-- Each slot has a **Preview** button — resolves the stream and plays it in a small modal to verify it works before cinema night
+- Each **short** and **feature** slot exposes curator controls:
+  - **Stream URL** — pin a specific debrid/direct URL instead of auto-resolving via Torrentio (leave blank to auto-resolve)
+  - **Audio track** — index of the audio stream to use (0-based; leave blank for default)
+  - **Subtitle override** — paste a direct .srt/.vtt URL to replace the auto-fetched subtitle
+  - **Subtitle offset** — seconds to shift subtitle timing (positive or negative)
+- Each slot has a **Preview** button — resolves the stream with the current curator settings and plays it in a small modal to verify before cinema night
 - Save/publish the week's playlist
 
 ### Watchlist

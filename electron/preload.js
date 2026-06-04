@@ -16,11 +16,14 @@ contextBridge.exposeInMainWorld('cinema', {
   },
   ytdlp: {
     resolve: (ytIdOrUrl) => ipcRenderer.invoke('ytdlp:resolve', ytIdOrUrl),
+    resolveSubtitles: (ytIdOrUrl) => ipcRenderer.invoke('ytdlp:resolve-subtitles', ytIdOrUrl),
   },
   debrid: {
-    resolve: (imdbId) => ipcRenderer.invoke('debrid:resolve', imdbId),
+    resolve: (imdbId, audioTrack) => ipcRenderer.invoke('debrid:resolve', imdbId, audioTrack),
+    proxy: (url, audioTrack) => ipcRenderer.invoke('debrid:proxy', url, audioTrack),
   },
   subtitles: {
     fetch: (imdbId, language) => ipcRenderer.invoke('subtitles:fetch', imdbId, language),
+    fetchUrl: (url) => ipcRenderer.invoke('subtitles:fetch-url', url),
   },
 })

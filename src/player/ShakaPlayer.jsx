@@ -67,6 +67,20 @@ const ShakaPlayer = forwardRef(function ShakaPlayer(
       player.unload().then(() => {
         if (cancelled) return
         video.src = streamUrl
+
+        // Inject subtitles via <track> for native video path
+        Array.from(video.querySelectorAll('track')).forEach(t => t.remove())
+        if (subtitleVtt) {
+          const blob = new Blob([subtitleVtt], { type: 'text/vtt' })
+          const blobUrl = URL.createObjectURL(blob)
+          const track = document.createElement('track')
+          track.kind = 'subtitles'
+          track.srclang = 'en'
+          track.default = true
+          track.src = blobUrl
+          video.appendChild(track)
+        }
+
         if (autoPlay) video.play().catch(() => {})
       })
       return () => {

@@ -1,5 +1,7 @@
 const { execFile } = require('child_process')
 const path = require('path')
+const fs = require('fs')
+const os = require('os')
 const { app } = require('electron')
 
 function getBinaryPath(store) {
@@ -38,11 +40,65 @@ function resolveYouTube(binaryPath, ytIdOrUrl) {
   })
 }
 
+function resolveYouTubeSubtitles(binaryPath, ytIdOrUrl) {
+  const url = ytIdOrUrl.startsWith('http')
+    ? ytIdOrUrl
+    : `https://youtube.com/watch?v=${ytIdOrUrl}`
+
+  const tmpBase = path.join(os.tmpdir(), `cinema-sub-${Date.now()}`)
+
+  return new Promise((resolve, reject) => {
+    execFile(
+      binaryPath,
+      [
+        '--js-runtimes', 'node',
+        '--write-sub', '--write-auto-sub',
+        '--sub-lang', 'en',
+        '--sub-format', 'vtt',
+        '--skip-download',
+        '--no-playlist',
+        '-o', tmpBase,
+        url,
+      ],
+      { timeout: 30000 },
+      (err) => {
+        // yt-dlp writes <tmpBase>.en.vtt or <tmpBase>.en-*.vtt
+        const candidates = fs.readdirSync(os.tmpdir())
+          .filter(f => f.startsWith(path.basename(tmpBase)) && f.endsWith('.vtt'))
+          .map(f => path.join(os.tmpdir(), f))
+
+        if (!candidates.length) {
+          return reject(new Error(err ? err.message : 'yt-dlp wrote no subtitle file'))
+        }
+
+        try {
+          const raw = fs.readFileSync(candidates[0], 'utf8')
+          candidates.forEach(f => { try { fs.unlinkSync(f) } catch {} })
+          // Strip YouTube positioning/alignment metadata from cue timings so
+          // subtitles render centred rather than left-aligned.
+          const vtt = raw.replace(
+            /([\d:.]+ --> [\d:.]+)[ \t][^\n]*/g,
+            '$1'
+          )
+          resolve(vtt)
+        } catch (readErr) {
+          reject(readErr)
+        }
+      }
+    )
+  })
+}
+
 function createYtdlpHandlers(ipcMain, store) {
   ipcMain.handle('ytdlp:resolve', async (_event, ytIdOrUrl) => {
     const binary = getBinaryPath(store)
     return resolveYouTube(binary, ytIdOrUrl)
   })
+
+  ipcMain.handle('ytdlp:resolve-subtitles', async (_event, ytIdOrUrl) => {
+    const binary = getBinaryPath(store)
+    return resolveYouTubeSubtitles(binary, ytIdOrUrl)
+  })
 }
 
-module.exports = { createYtdlpHandlers, resolveYouTube }
+module.exports = { createYtdlpHandlers, resolveYouTube, resolveYouTubeSubtitles }

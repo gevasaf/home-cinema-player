@@ -57,7 +57,6 @@ async function fetchTorrentio(imdbId) {
 async function resolveRealDebrid(apiToken, infoHash) {
   const magnet = `magnet:?xt=urn:btih:${infoHash}`
 
-  // Add magnet
   const added = await httpsPost(
     'https://api.real-debrid.com/rest/1.0/torrents/addMagnet',
     { magnet },
@@ -66,14 +65,12 @@ async function resolveRealDebrid(apiToken, infoHash) {
   const torrentId = added.id
   if (!torrentId) throw new Error('Real-Debrid addMagnet failed')
 
-  // Select all files
   await httpsPost(
     `https://api.real-debrid.com/rest/1.0/torrents/selectFiles/${torrentId}`,
     { files: 'all' },
     { Authorization: `Bearer ${apiToken}` }
   )
 
-  // Poll for links (up to 30s)
   for (let i = 0; i < 15; i++) {
     await new Promise((r) => setTimeout(r, 2000))
     const info = await httpsGet(
@@ -86,6 +83,7 @@ async function resolveRealDebrid(apiToken, infoHash) {
         { link: info.links[0] },
         { Authorization: `Bearer ${apiToken}` }
       )
+      if (!unrestricted.download) throw new Error('Real-Debrid: unrestrict returned no download URL')
       return unrestricted.download
     }
   }
@@ -122,9 +120,11 @@ async function resolveAllDebrid(apiKey, infoHash) {
   throw new Error('AllDebrid: timed out waiting for download link')
 }
 
+
 function createDebridHandlers(ipcMain, store) {
-  ipcMain.handle('debrid:resolve', async (_event, imdbId) => {
+  ipcMain.handle('debrid:resolve', async (_event, imdbId, audioTrack = 0) => {
     const service = store.get('settings.debridService') || 'real-debrid'
+
     const streams = await fetchTorrentio(imdbId)
     if (!streams.length) throw new Error(`No Torrentio streams found for ${imdbId}`)
 
@@ -141,7 +141,12 @@ function createDebridHandlers(ipcMain, store) {
       directUrl = await resolveRealDebrid(apiToken, infoHash)
     }
 
-    return proxyUrl(directUrl)
+    return proxyUrl(directUrl, audioTrack)
+  })
+
+  // Wrap a pre-resolved URL through the transcode proxy (curator-pinned stream).
+  ipcMain.handle('debrid:proxy', async (_event, url, audioTrack = 0) => {
+    return proxyUrl(url, audioTrack)
   })
 }
 

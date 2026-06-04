@@ -42,8 +42,11 @@ const STATE_ORDER = [
  * @param {Object} resolvers
  * @param {function(string): Promise<string>} resolvers.resolveLocal  local:// → file path
  * @param {function(string): Promise<string>} resolvers.resolveYoutube  ytId/url → stream url
- * @param {function(string): Promise<string>} resolvers.resolveDebrid  imdbId → stream url
+ * @param {function(string): Promise<string>} resolvers.resolveYoutubeSubtitles  ytId/url → vtt
+ * @param {function(string, number?): Promise<string>} resolvers.resolveDebrid  (imdbId, audioTrack?) → proxied stream url
+ * @param {function(string, number?): Promise<string>} resolvers.proxyStreamUrl  (url, audioTrack?) → proxied stream url
  * @param {function(string, string): Promise<string>} resolvers.fetchSubtitles  (imdbId, lang) → vtt
+ * @param {function(string): Promise<string>} resolvers.fetchSubtitleUrl  url → vtt
  * @param {function(Object): void} resolvers.onStateChange  called on every context change
  * @param {function(Object): void} resolvers.onComplete  called when FEATURE completes
  */
@@ -51,8 +54,11 @@ export function createSequencer(resolvers) {
   const {
     resolveLocal,
     resolveYoutube,
+    resolveYoutubeSubtitles,
     resolveDebrid,
+    proxyStreamUrl,
     fetchSubtitles,
+    fetchSubtitleUrl,
     onStateChange,
     onComplete,
   } = resolvers
@@ -71,6 +77,41 @@ export function createSequencer(resolvers) {
   function emit(patch) {
     ctx = { ...ctx, ...patch }
     onStateChange(ctx)
+  }
+
+  function shiftVtt(vtt, offsetSeconds) {
+    if (!offsetSeconds) return vtt
+    const shiftTime = (t) => {
+      const [h, m, s] = t.split(':')
+      const total = Math.max(0, parseInt(h) * 3600 + parseInt(m) * 60 + parseFloat(s) + offsetSeconds)
+      const oh = Math.floor(total / 3600)
+      const om = Math.floor((total % 3600) / 60)
+      const os = (total % 60).toFixed(3).padStart(6, '0')
+      return `${String(oh).padStart(2, '0')}:${String(om).padStart(2, '0')}:${os}`
+    }
+    return vtt.replace(/([\d:]+\.[\d]+) --> ([\d:]+\.[\d]+)/g,
+      (_, a, b) => `${shiftTime(a)} --> ${shiftTime(b)}`)
+  }
+
+  async function resolveItem(item) {
+    if (item.type === 'youtube') {
+      const [url, vtt] = await Promise.all([
+        resolveYoutube(item.ytId),
+        resolveYoutubeSubtitles(item.ytId).catch(() => null),
+      ])
+      return { url, vtt }
+    }
+
+    const [url, rawVtt] = await Promise.all([
+      item.streamUrl
+        ? proxyStreamUrl(item.streamUrl, item.audioTrack ?? 0)
+        : resolveDebrid(item.imdbId, item.audioTrack ?? 0),
+      item.subtitleOverride
+        ? fetchSubtitleUrl(item.subtitleOverride).catch(() => null)
+        : fetchSubtitles(item.imdbId, null).catch(() => null),
+    ])
+    const vtt = shiftVtt(rawVtt, item.subtitleOffset ?? 0)
+    return { url, vtt }
   }
 
   function currentTrailer() {
@@ -96,24 +137,21 @@ export function createSequencer(resolvers) {
       case STATES.TRAILERS: {
         const trailer = currentTrailer()
         if (!trailer) return { url: null, vtt: null }
-        return { url: await resolveYoutube(trailer.ytId), vtt: null }
+        const [url, vtt] = await Promise.all([
+          resolveYoutube(trailer.ytId),
+          resolveYoutubeSubtitles(trailer.ytId).catch(() => null),
+        ])
+        return { url, vtt }
       }
 
-      case STATES.SHORT: {
-        const url = await resolveDebrid(pl.short.imdbId)
-        return { url, vtt: null }
-      }
+      case STATES.SHORT:
+        return resolveItem(pl.short)
 
       case STATES.BUMPER:
         return { url: await resolveLocal(pl.featureBumper), vtt: null }
 
-      case STATES.FEATURE: {
-        const [url, vtt] = await Promise.all([
-          resolveDebrid(pl.feature.imdbId),
-          fetchSubtitles(pl.feature.imdbId, null).catch(() => null),
-        ])
-        return { url, vtt }
-      }
+      case STATES.FEATURE:
+        return resolveItem(pl.feature)
 
       case STATES.CREDITS:
         return { url: null, vtt: null }

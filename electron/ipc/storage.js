@@ -75,17 +75,26 @@ function buildTestPlaylist() {
       { type: 'youtube', ytId: '_IY7_iCuINo', title: 'Test Trailer 1' },
     ],
     short: {
-      type: 'torrent',
-      imdbId: 'tt0109830',  // Forrest Gump (short stand-in for testing)
-      title: 'Test Short',
-      tmdbId: '13',
+      type: 'youtube',
+      ytId: 'kjP2Hbd-_No',  // Pixar's Boundin' (2003)
+      title: "Boundin'",
+      imdbId: 'tt0293715',
+      tmdbId: '13730',
+      streamUrl: null,
+      audioTrack: null,
+      subtitleOverride: null,
+      subtitleOffset: 0,
     },
     featureBumper: 'local://assets/feature-presentation.mp4',
     feature: {
       type: 'torrent',
-      imdbId: 'tt0468569',  // The Dark Knight
-      title: 'The Dark Knight',
-      tmdbId: '155',
+      imdbId: 'tt0117705',  // Space Jam (1996)
+      title: 'Space Jam',
+      tmdbId: '2300',
+      streamUrl: null,
+      audioTrack: null,
+      subtitleOverride: null,
+      subtitleOffset: 0,
     },
     completedAt: null,
   }
